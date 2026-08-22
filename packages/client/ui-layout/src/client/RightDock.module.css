@@ -1,0 +1,62 @@
+/* RightDock: full-height tabbed container for shell.right-sidebar entries.
+   The column keeps the dock mounted at zero width when closed; when open it
+   owns the whole track (tabs + active entry body). */
+.dock {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background: var(--dsw-alias-bg-base);
+}
+
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+  overflow: hidden;
+}
+
+.tab,
+.tabActive {
+  appearance: none;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  line-height: 1.2;
+  font-family: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+  background: transparent;
+  color: var(--dsw-alias-text-tertiary);
+}
+
+.tab:hover {
+  color: var(--dsw-alias-text-primary);
+  background: var(--dsw-alias-button-floating-fill);
+}
+
+.tabActive {
+  color: var(--dsw-alias-text-primary);
+  background: var(--dsw-alias-button-floating-fill);
+  border-color: var(--dsw-alias-border-l2-darkmode-thin);
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.empty {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  padding: 16px;
+  color: var(--dsw-alias-text-tertiary);
+  font-size: 12px;
+}

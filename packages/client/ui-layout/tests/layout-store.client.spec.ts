@@ -21,7 +21,8 @@ describe('createLayoutStore', () => {
   it('initializes the sidebar at its default width, details closed, wide viewport assumed', () => {
     const { store } = createLayoutStore().create()
     expect(store.getSnapshot()).toEqual({
-      sidebar: SIDEBAR_DEFAULT, rightSidebar: 0, details: 0, narrow: false, narrowExpanded: false,
+      sidebar: SIDEBAR_DEFAULT, rightSidebar: 0, details: 0, activeDockTab: '',
+      narrow: false, narrowExpanded: false,
     })
   })
 
@@ -59,7 +60,8 @@ describe('createLayoutStore', () => {
     actions.setNarrow(true)
     actions.toggleSidebar()
     expect(store.getSnapshot()).toEqual({
-      sidebar: 400, rightSidebar: 0, details: 0, narrow: true, narrowExpanded: true,
+      sidebar: 400, rightSidebar: 0, details: 0, activeDockTab: '',
+      narrow: true, narrowExpanded: true,
     })
     actions.toggleSidebar()
     expect(store.getSnapshot().narrowExpanded).toBe(false)
@@ -112,6 +114,7 @@ describe('createLayoutStore', () => {
       sidebar: SIDEBAR_DEFAULT,
       rightSidebar: 0,
       details: 0,
+      activeDockTab: '',
       narrow: false,
       narrowExpanded: false,
     })

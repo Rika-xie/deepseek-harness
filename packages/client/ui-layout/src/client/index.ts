@@ -1,7 +1,7 @@
 /**
  * Layout plugin, browser half: one register() call contributes AppFrame into
  * the runtime's built-in 'root' slot and, in the same breath, declares the
- * four child slots (declaration = exclusive render authority), seats the
+ * five child slots (declaration = exclusive render authority), seats the
  * layout store (panel geometry), and wires the panel-action service face.
  * ctx.layout is the cross-plugin panel-action contract; navigation state lives
  * with the runtime sessions service. A second effect seats the theme
@@ -10,7 +10,7 @@
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
 import type {} from '@deepseek-ai/dsh-client-ui-theme/client'
 import type { PanelActions } from './service.ts'
-import { AppFrame } from './AppFrame.tsx'
+import { AppFrame, type LayoutInjected } from './AppFrame.tsx'
 import { createLayoutStore } from './stores.ts'
 import { LayoutController } from './service.ts'
 import { ThemePresenter } from './theme-presenter.ts'
@@ -61,29 +61,26 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
      */
     'conversation': { kind: 'single'; scope: 'session-maybe'; owner: ConvOwnerProps }
     /**
-     * The right details column, shown when the layout opens it. OCCUPIED by
-     * ui-conversation's DetailsPanel, which declares the tool-details seat
-     * inside it — registering here replaces the column and takes that seat
-     * with it. Absent an occupant the column renders nothing.
-     *
-     * No owner props: the framework injects the session id and hooks for the
-     * `session` scope, and `ctx.layout` owns whether the column is open.
+     * Legacy right details column, kept as a declared frame slot for
+     * compatibility (width 0 and empty unless a future occupant registers).
+     * The native DetailsPanel no longer lives here: it is a tab inside
+     * `shell.right-sidebar`. No owner props: the framework injects the
+     * session id and hooks for the `session` scope, and `ctx.layout` owns
+     * whether the column is open.
      */
     'details': { kind: 'single'; scope: 'session'; owner: DetailsOwnerProps }
     /**
-     * Additive docked column between the conversation and details columns.
-     * Registrants coordinate their open/closed state with
-     * `ctx.layout.openRightSidebar/closeRightSidebar`; the frame then includes
-     * the dock in its concession solver. An open entry renders a full-height
-     * surface and fills the owner-controlled track. Use this for persistent
-     * workspace tools such as a file tree or a side panel, not for floating
-     * notices (which belong in `shell.overlay`).
+     * Additive tabbed dock column between the conversation and details
+     * columns. RightDock renders a tab strip from the registered entries and
+     * dispatches only the active entry. Registrants coordinate open/closed
+     * state with `ctx.layout.openRightSidebar/closeRightSidebar`; the frame
+     * then includes the dock in its concession solver.
      *
-     * A fresh `id` adds a surface beside other entries; entries should
-     * coordinate their visibility so only one wide workspace tool is open at
-     * a time.
+     * Session-maybe (deliberate fork point vs pilot's root): entries such as
+     * the native tool-details panel need the framework session kit
+     * (`sessionId`/`useSession`), which root-scope slots cannot receive.
      */
-    'shell.right-sidebar': { kind: 'list'; scope: 'root' }
+    'shell.right-sidebar': { kind: 'list'; scope: 'session-maybe' }
     /**
      * Frame-wide floating layer, above every column and outside their scroll
      * containers. Deliberately generic and unowned by any feature: a badge, a
@@ -137,17 +134,22 @@ export function apply(ctx: ClientContext): void {
         'sidebar': { kind: 'single', scope: 'root' },
         'conversation': { kind: 'single', scope: 'session-maybe' },
         'details': { kind: 'single', scope: 'session' },
-        'shell.right-sidebar': { kind: 'list', scope: 'root' },
+        'shell.right-sidebar': { kind: 'list', scope: 'session-maybe' },
         'shell.overlay': { kind: 'list', scope: 'root' },
       },
       // Exclusive store: the factory itself — the framework instantiates per
       // entry and delivers useStore/actions to AppFrame as standard props.
       store: createLayoutStore,
-      // The hook's only side effect connects the root store to ctx.layout;
-      // conversation business actions belong to their registrants.
-      inject: (actions: PanelActions) => {
+      // The hook connects the root store to ctx.layout and hands AppFrame
+      // the live right-dock entry ledger for its tab strip.
+      inject: (actions: PanelActions): LayoutInjected => {
         layout.attachPanels(actions)
-        return {}
+        return {
+          dockEntries: {
+            subscribe: fn => ctx.slots.subscribe('shell.right-sidebar', fn),
+            getSnapshot: () => ctx.slots.entries('shell.right-sidebar'),
+          },
+        }
       },
     }, AppFrame)
     return () => {

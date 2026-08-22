@@ -5,8 +5,9 @@
  * the per-session active view dissolved into ui-conversation's session store
  * (its only consumer). What remains here is the contract other plugins'
  * apply worlds reach for panel transitions (sidebar toggle from ui-sidebar,
- * details open/close from ui-conversation) — writes stay inside the store's
- * declared action set, delivered as the registration's bound actions.
+ * dock open/close/tab from ui-conversation and the rightbar plugin) — writes
+ * stay inside the store's declared action set, delivered as the
+ * registration's bound actions.
  */
 import type { BoundActions } from '@deepseek-ai/dsh-client-ui-slots'
 import type { createLayoutStore } from './stores.ts'
@@ -23,14 +24,20 @@ export type PanelActions = BoundActions<ReturnType<typeof createLayoutStore>>
 export interface ILayout {
   /** Toggle the sidebar panel (closed ⟷ contract default width). */
   toggleSidebar(): void
-  /** Open the details panel (no-op when already open). */
+  /**
+   * Open the right dock and activate the `details` tab. The legacy details
+   * column is superseded by the dock's tool-details tab, so this name is
+   * kept as the conversation-facing gesture that restores native tool cards.
+   */
   openDetails(): void
-  /** Close the details panel. */
+  /** Close the right dock (the details tab lives inside it). */
   closeDetails(): void
   /** Open the additive docked right-sidebar column. */
   openRightSidebar(): void
   /** Close the additive docked right-sidebar column. */
   closeRightSidebar(): void
+  /** Activate one right-dock tab by entry id. */
+  setDockTab(tab: string): void
 }
 
 /** Cross-plugin panel-action face (ctx.layout). */
@@ -53,14 +60,16 @@ export class LayoutController implements ILayout {
     this.#require().toggleSidebar()
   }
 
-  /** Open the details panel (no-op when already open). */
+  /** Open the right dock and activate the `details` tab. */
   openDetails(): void {
-    this.#require().openDetails()
+    const panels = this.#require()
+    panels.openRightSidebar()
+    panels.setDockTab('details')
   }
 
-  /** Close the details panel. */
+  /** Close the right dock (the details tab lives inside it). */
   closeDetails(): void {
-    this.#require().closeDetails()
+    this.#require().closeRightSidebar()
   }
 
   /** Open the additive docked right-sidebar column. */
@@ -71,6 +80,11 @@ export class LayoutController implements ILayout {
   /** Close the additive docked right-sidebar column. */
   closeRightSidebar(): void {
     this.#require().closeRightSidebar()
+  }
+
+  /** Activate one right-dock tab by entry id. */
+  setDockTab(tab: string): void {
+    this.#require().setDockTab(tab)
   }
 
   #require(): PanelActions {

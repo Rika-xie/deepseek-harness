@@ -15,6 +15,7 @@ import { act, cleanup, render } from '@testing-library/react'
 import { useSyncExternalStore } from 'react'
 import { AppFrame } from '@deepseek-ai/dsh-client-ui-layout/src/client/AppFrame.tsx'
 import type { AppFrameProps } from '@deepseek-ai/dsh-client-ui-layout/src/client/AppFrame.tsx'
+import type { StoredEntry } from '@deepseek-ai/dsh-client-ui-slots'
 import { SIDEBAR_COLLAPSED } from '@deepseek-ai/dsh-client-ui-layout/src/client/columns.ts'
 import { createLayoutStore } from '@deepseek-ai/dsh-client-ui-layout/src/client/stores.ts'
 import type {
@@ -65,6 +66,12 @@ function mountFrame() {
     if (key === 'conversation.empty') return <div data-testid="empty-content" />
     return <div data-testid="other-content" />
   }) as AppFrameProps['renderSlot']
+  // Non-empty right-dock ledger: AppFrame must render the slot through
+  // RightDock (empty-state behavior is covered by RightDock's own spec).
+  const dockEntries: readonly StoredEntry[] = [
+    { component: null, options: { id: 'files', label: '文件' } },
+    { component: null, options: { id: 'details', label: '详情' } },
+  ]
   const useSessions = ((sel: (s: SessionListState) => unknown) => {
     const current = selectedSession.current
     const sessionState = {
@@ -89,6 +96,7 @@ function mountFrame() {
       useSessions={useSessions}
       useWorkspaces={((sel: (s: WorkspaceListState) => unknown) => sel(workspaceState)) as never}
       SessionProvider={SessionProviderStub}
+      dockEntries={{ subscribe: () => () => {}, getSnapshot: () => dockEntries }}
     />
   )
   const utils = render(element())

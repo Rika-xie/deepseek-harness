@@ -24,6 +24,9 @@ type LayoutState = {
   sidebar: number
   rightSidebar: number
   details: number
+  /** The right-dock tab selected by the user; '' lets RightDock fall back to
+   * the first registered entry (no plugin id leaks into the generic layout). */
+  activeDockTab: string
   narrow: boolean
   narrowExpanded: boolean
 }
@@ -41,6 +44,7 @@ type LayoutActions = {
   closeDetails: (draft: LayoutState) => void
   openRightSidebar: (draft: LayoutState) => void
   closeRightSidebar: (draft: LayoutState) => void
+  setDockTab: (draft: LayoutState, tab: string) => void
 }
 
 /**
@@ -56,7 +60,8 @@ type LayoutActions = {
 export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutActions>  {
   const handle = defineStore({
     init: (): LayoutState => ({
-      sidebar: SIDEBAR_DEFAULT, rightSidebar: 0, details: 0, narrow: false, narrowExpanded: false,
+      sidebar: SIDEBAR_DEFAULT, rightSidebar: 0, details: 0, activeDockTab: '',
+      narrow: false, narrowExpanded: false,
     }),
     actions: {
       setSidebar: (d, px: number) => { d.sidebar = clampWidth(px, SIDEBAR_MIN, SIDEBAR_MAX) },
@@ -78,6 +83,7 @@ export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutAction
       closeDetails: (d) => { d.details = 0 },
       openRightSidebar: (d) => { if (d.rightSidebar === 0) d.rightSidebar = RIGHT_SIDEBAR_DEFAULT },
       closeRightSidebar: (d) => { d.rightSidebar = 0 },
+      setDockTab: (d, tab: string) => { d.activeDockTab = tab },
     },
   })
   return handle

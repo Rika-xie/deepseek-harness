@@ -1,7 +1,7 @@
 /**
  * LayoutController behavior: the cross-plugin panel-action face. Geometry
  * lives in the entry store (layout-store.spec.ts) — here we assert the
- * delegation contract: attachPanels wiring, the three actions forwarding, the
+ * delegation contract: attachPanels wiring, the panel actions forwarding, the
  * unwired fail-loud, and re-attach overwriting a stale action set.
  */
 import { describe, expect, it, vi } from 'vitest'
@@ -18,11 +18,12 @@ function fakePanels(): PanelActions {
     closeDetails: vi.fn(),
     openRightSidebar: vi.fn(),
     closeRightSidebar: vi.fn(),
+    setDockTab: vi.fn(),
   }
 }
 
 describe('LayoutController', () => {
-  it('forwards the three panel actions to the attached set', () => {
+  it('forwards the panel actions to the attached set', () => {
     const service = new LayoutController()
     const panels = fakePanels()
     service.attachPanels(panels)
@@ -32,12 +33,15 @@ describe('LayoutController', () => {
     service.closeDetails()
     service.openRightSidebar()
     service.closeRightSidebar()
+    service.setDockTab('files')
 
     expect(panels.toggleSidebar).toHaveBeenCalledTimes(1)
-    expect(panels.openDetails).toHaveBeenCalledTimes(1)
-    expect(panels.closeDetails).toHaveBeenCalledTimes(1)
-    expect(panels.openRightSidebar).toHaveBeenCalledTimes(1)
-    expect(panels.closeRightSidebar).toHaveBeenCalledTimes(1)
+    expect(panels.openDetails).not.toHaveBeenCalled()
+    expect(panels.openRightSidebar).toHaveBeenCalledTimes(2)
+    expect(panels.setDockTab).toHaveBeenCalledWith('details')
+    expect(panels.closeDetails).not.toHaveBeenCalled()
+    expect(panels.closeRightSidebar).toHaveBeenCalledTimes(2)
+    expect(panels.setDockTab).toHaveBeenCalledTimes(2)
     expect(panels.setSidebar).not.toHaveBeenCalled()
     expect(panels.setDetails).not.toHaveBeenCalled()
   })

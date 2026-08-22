@@ -14,14 +14,22 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import type { ReactNode } from 'react'
 import type { PropsRenderSlots, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-client-ui-slots'
 import { computeColumns, SIDEBAR_AUTO_COLLAPSE, SIDEBAR_DEFAULT } from './columns.ts'
+import { RightDock, type DockEntriesSource } from './RightDock.tsx'
 import type { createLayoutStore } from './stores.ts'
 import css from './AppFrame.module.css'
 
-/** Full composed props: runtime share + child-slot render share + store share. */
+/** Inject face delivered by the root registration to AppFrame. */
+export interface LayoutInjected {
+  /** Live `shell.right-sidebar` ledger projection for the dock tab strip. */
+  dockEntries: DockEntriesSource
+}
+
+/** Full composed props: runtime share + child-slot render share + store share + root inject face. */
 export type AppFrameProps =
   & PropsRuntime<'root'>
   & PropsRenderSlots<'sidebar' | 'conversation' | 'details' | 'shell.right-sidebar' | 'shell.overlay'>
   & PropsStore<ReturnType<typeof createLayoutStore>>
+  & LayoutInjected
 
 /** Center column grid item (session-body building block). */
 function CenterColumn(props: { children?: ReactNode }) {
@@ -94,6 +102,7 @@ export function AppFrame({
   useSessions,
   actions,
   renderSlot,
+  dockEntries,
 }: AppFrameProps) {
   const panels = useStore(s => s)
   const detailsSession = useSessions((s) => {
@@ -199,7 +208,14 @@ export function AppFrame({
             is session-maybe; the strict details entry naturally renders
             empty while no session is current. */}
         <CenterColumn>{renderSlot('conversation', {})}</CenterColumn>
-        <RightSidebarColumn>{renderSlot('shell.right-sidebar', {})}</RightSidebarColumn>
+        <RightSidebarColumn>
+          <RightDock
+            useStore={useStore}
+            actions={actions}
+            renderSlot={renderSlot}
+            dockEntries={dockEntries}
+          />
+        </RightSidebarColumn>
         <DetailsColumn>{renderSlot('details', {})}</DetailsColumn>
       </>
       <div className={css.overlayLayer} data-shell-overlay>
