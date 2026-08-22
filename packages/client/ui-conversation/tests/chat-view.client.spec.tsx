@@ -162,9 +162,11 @@ function makeHarness(init?: Partial<ConversationSnapshot>) {
     read: () => savedScroll,
   }
   const forkAt = vi.fn()
-  // Selection rides the REAL chat store (same construction path as
-  // production; the view reads it through the PropsStore useStore share).
+  // ChatStore still rides the PropsStore seat (registration contract), but
+  // selection now flows through the per-session selection snapshot, matching
+  // apply.ts's single-source inject hook.
   const chat = createChatStore().create()
+  const selection = createSnapshotStore<SelectionTarget | null>(null)
   const t = makeTranslate(zh, commonZh)
   const toolOwners: Array<{
     callId: string
@@ -278,6 +280,7 @@ function makeHarness(init?: Partial<ConversationSnapshot>) {
     },
     useStore: bindSnapshotSelector(chat),
     actions: chat.actions,
+    useSelection: bindSnapshotSelector(selection),
     renderSlot,
     SessionProvider: SessionProviderStub,
     openDetails,
@@ -292,7 +295,7 @@ function makeHarness(init?: Partial<ConversationSnapshot>) {
     // Mirrors the real lookup chain (conversation namespace, then common).
     t,
   }
-  const setSelection = (next: SelectionTarget | null): void => { chat.actions.select(next) }
+  const setSelection = (next: SelectionTarget | null): void => { selection.set(next) }
   return {
     set, ChatView, props, openDetails, openFile, loadOlder, inspectCall,
     chatScroll, forkAt, setSelection, toolOwners,

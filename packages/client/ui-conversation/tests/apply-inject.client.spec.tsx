@@ -67,7 +67,7 @@ async function bench() {
   // live entry before apply can contribute into them.
   await runtime.root.declare({
     'conversation': { kind: 'single', scope: 'session-maybe' },
-    'details': { kind: 'single', scope: 'session' },
+    'shell.right-sidebar': { kind: 'list', scope: 'session-maybe' },
   }, (_p: { renderSlot?: unknown }) => null)
 
   const feature = await runtime.mount({ inject: [...inject], apply })
@@ -75,7 +75,7 @@ async function bench() {
   // The host face (store resolution) exists only inside the installed
   // renderer, so materialize it the way the shell does.
   runtime.renderRoot()
-  const entryOf = (key: 'conversation' | 'conversation.session' | 'conversation.session.header' | 'conversation.composer.bar' | 'conversation.view' | 'details') =>
+  const entryOf = (key: 'conversation' | 'conversation.session' | 'conversation.session.header' | 'conversation.composer.bar' | 'conversation.view' | 'shell.right-sidebar') =>
     runtime.slots.entries(key)[0]!
   /** Resolve store instance + call the inject the way the outlet would. */
   const conversationApi = (id: SessionId) => {
@@ -220,16 +220,16 @@ describe('conversation slot inject API', () => {
     await b.runtime.dispose()
   })
 
-  it('openDetails (chat view face) writes the selection through the store actions and opens the panel', async () => {
+  it('openDetails (chat view face) writes the per-session selection snapshot and opens the panel', async () => {
     const b = await bench()
-    const { instance, injected } = b.chatViewApi(ROOT)
+    const { injected } = b.chatViewApi(ROOT)
     injected.openDetails({ turnSeq: 2, callId: 'c1' })
-    expect(instance.store.getSnapshot().selection).toEqual({ turnSeq: 2, callId: 'c1' })
+    expect(injected.hooks.selection.getSnapshot()).toEqual({ turnSeq: 2, callId: 'c1' })
     expect(b.layoutFake.openDetails).toHaveBeenCalledTimes(1)
-    // The chat view shares the conversation entry's store instance: selection
-    // writes land where the skeleton and details read.
-    const conv = b.conversationApi(ROOT)
-    expect(conv.instance).toBe(instance)
+    // The details entry reads the SAME per-session selection source.
+    const detailsEntry = b.entryOf('shell.right-sidebar')
+    const detailsInjected = (detailsEntry.inject as unknown as (sessionId: SessionId | undefined) => DetailsInjected)(ROOT)
+    expect(detailsInjected.hooks.selection.getSnapshot()).toEqual({ turnSeq: 2, callId: 'c1' })
     await b.runtime.dispose()
   })
 
@@ -347,17 +347,16 @@ describe('conversation slot inject API', () => {
 })
 
 describe('details inject API', () => {
-  it('details injects the one layout callback; selection rides the shared store instead', async () => {
+  it('details injects the layout callback + selection hook; no shared chat-store seat', async () => {
     const b = await bench()
-    const entry = b.entryOf('details')
-    const injected = (entry.inject as unknown as () => DetailsInjected)()
-    expect(Object.keys(injected)).toEqual(['closeDetails'])
+    const entry = b.entryOf('shell.right-sidebar')
+    const injected = (entry.inject as unknown as (sessionId: SessionId | undefined) => DetailsInjected)(ROOT)
+    expect(Object.keys(injected).sort()).toEqual(['closeDetails', 'hooks'])
+    expect(injected.hooks.selection.getSnapshot()).toBeNull()
     injected.closeDetails()
     expect(b.layoutFake.closeDetails).toHaveBeenCalledTimes(1)
-    // The shared handle: details resolves the SAME instance conversation writes.
-    const conv = b.runtime.storeOf('conversation.session', ROOT)
-    const details = b.runtime.storeOf('details', ROOT)
-    expect(details).toBe(conv)
+    // The dock entry carries no chat-store seat; selection is a snapshot hook.
+    expect(entry.store).toBeUndefined()
     await b.runtime.dispose()
   })
 })

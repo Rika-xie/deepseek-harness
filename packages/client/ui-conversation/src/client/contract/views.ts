@@ -13,12 +13,12 @@ export interface SelectionTarget { turnSeq: number; stepSeq?: number; callId?: C
 export interface ViewTab { id: string; label: string }
 
 /**
- * Per-session state shared by conversation, chat-view, and details slots.
- * Unknown persisted view ids fall back to the stable Chat view.
+ * Per-session state shared by conversation, chat-view, and header slots.
+ * Tool-detail selection is NOT part of this store: it lives in the
+ * per-session selection snapshot published through the chat/details inject
+ * hooks (ui-conversation owns one selection source for both readers).
  */
 export interface ChatStoreState {
-  /** Details-linkage channel (conversation writes, details reads). */
-  selection: SelectionTarget | null
   /** Composer draft (persisted; survives session switches and reloads). */
   draft: string
   /** Active conversation view id ('conversation.view' entry id); null falls back to Chat. */

@@ -22,7 +22,6 @@ import type { SelectionTarget } from '@deepseek-ai/dsh-client-ui-conversation/cl
 import type { ToolCallOwnerProps } from '@deepseek-ai/dsh-client-ui-tool/client'
 import { IconGlobeOutline14 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { webCardModel } from '../src/client/tool/models/web-card-model.ts'
-import { createChatStore } from '@deepseek-ai/dsh-client-ui-conversation/src/client/stores.ts'
 import { GenericToolCard } from '../src/client/tool/toolviews/GenericToolCard.tsx'
 import { DetailsPanel } from '@deepseek-ai/dsh-client-ui-conversation/src/client/skeleton/DetailsPanel.tsx'
 import { WebRow, webToolview } from '../src/client/tool/toolviews/web-row.tsx'
@@ -209,8 +208,8 @@ describe('chat row web body', () => {
 describe('DetailsPanel web Output section', () => {
   function mount(snapshot: ConversationSnapshot, selection: SelectionTarget | null) {
     localStorage.clear()
-    const chat = createChatStore().create()
-    if (selection !== null) chat.actions.select(selection)
+    const selectionStore = createSnapshotStore<SelectionTarget | null>(null)
+    if (selection !== null) selectionStore.set(selection)
     const sessions = createSnapshotStore<SessionListState>({
       ids: [], byId: {}, current: undefined, phase: 'ready',
       subagentsByParent: {}, jobsBySession: {}, currentAddress: undefined,
@@ -236,8 +235,7 @@ describe('DetailsPanel web Output section', () => {
           submit: () => {},
         }}
         useProjection={(() => undefined)}
-        useStore={bindSnapshotSelector(chat)}
-        actions={chat.actions}
+        useSelection={bindSnapshotSelector(selectionStore)}
         closeDetails={vi.fn()}
         t={t}
       />,

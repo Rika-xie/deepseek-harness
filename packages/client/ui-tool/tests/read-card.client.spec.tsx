@@ -21,7 +21,6 @@ import type {
 import type { ToolResultView } from '@deepseek-ai/dsh-api-remotes/client'
 import type { SelectionTarget } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { CHAT_READ_MAX_LINES, readCardModel } from '../src/client/tool/models/read-card-model.ts'
-import { createChatStore } from '@deepseek-ai/dsh-client-ui-conversation/src/client/stores.ts'
 import { GenericToolCard, type GenericToolCardProps } from '../src/client/tool/toolviews/GenericToolCard.tsx'
 import { zh } from '@deepseek-ai/dsh-client-ui-conversation/src/client/locales.ts'
 import { DetailsPanel } from '@deepseek-ai/dsh-client-ui-conversation/src/client/skeleton/DetailsPanel.tsx'
@@ -268,8 +267,8 @@ describe('DetailsPanel Output section (read)', () => {
     description?: Parameters<typeof renderToolDetails>[1],
   ) {
     localStorage.clear()
-    const chat = createChatStore().create()
-    if (selection !== null) chat.actions.select(selection)
+    const selectionStore = createSnapshotStore<SelectionTarget | null>(null)
+    if (selection !== null) selectionStore.set(selection)
     const sessions = createSnapshotStore<SessionListState>(cwd === undefined
       ? { ids: [], byId: {}, current: undefined, phase: 'ready', subagentsByParent: {}, jobsBySession: {}, currentAddress: undefined }
       : {
@@ -302,8 +301,7 @@ describe('DetailsPanel Output section (read)', () => {
           submit: () => {},
         }}
         useProjection={(() => undefined)}
-        useStore={bindSnapshotSelector(chat)}
-        actions={chat.actions}
+        useSelection={bindSnapshotSelector(selectionStore)}
         closeDetails={vi.fn()}
       />,
     )

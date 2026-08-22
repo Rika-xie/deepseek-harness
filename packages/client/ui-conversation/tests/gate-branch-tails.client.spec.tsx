@@ -12,7 +12,6 @@ import type { SessionProviderComponent } from '@deepseek-ai/dsh-client-ui-slots'
 import type { DetailsSlotProps, DetailsToolOwnerProps, SelectionTarget } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
 import { zh as commonZh } from '@deepseek-ai/dsh-client-locale/src/locales/zh.ts'
-import { createChatStore } from '../src/client/stores.ts'
 import { AssistantMarkdown, type AssistantMarkdownProps } from '../src/client/chat/AssistantMarkdown.tsx'
 import { StatsLine } from '../src/client/chat/StatsLine.tsx'
 import { DetailsPanel } from '../src/client/skeleton/DetailsPanel.tsx'
@@ -115,8 +114,8 @@ describe('render branch tails', () => {
   it('DetailsPanel title falls to 详情 when the selection has no toolName and no material', () => {
     localStorage.clear()
     const snap = snapshotBase()
-    const chat = createChatStore().create()
-    chat.actions.select({ turnSeq: 1, callId: 'ghost' } satisfies SelectionTarget)
+    const selection = createSnapshotStore<SelectionTarget | null>(null)
+    selection.set({ turnSeq: 1, callId: 'ghost' } satisfies SelectionTarget)
     const emptyList = createSnapshotStore<SessionListState>(
       { ids: [], byId: {}, current: undefined, phase: 'ready', subagentsByParent: {}, jobsBySession: {}, currentAddress: undefined })
     const emptyWorkspaces = createSnapshotStore<WorkspaceListState>({
@@ -140,8 +139,7 @@ describe('render branch tails', () => {
           pruneImages: () => {},
           submit: () => {},
         }}
-        useStore={bindSnapshotSelector(chat)}
-        actions={chat.actions}
+        useSelection={bindSnapshotSelector(selection)}
         closeDetails={vi.fn()}
         t={t}
       />,
@@ -171,8 +169,8 @@ describe('render branch tails', () => {
       }],
     }]
     snap.chat = chatSnapshotFixture({ runningCalls: snap.runningCalls })
-    const chat = createChatStore().create()
-    chat.actions.select({ turnSeq: 9, callId: 'p1:code:1:code:1', toolName: 'read' } satisfies SelectionTarget)
+    const selection = createSnapshotStore<SelectionTarget | null>(null)
+    selection.set({ turnSeq: 9, callId: 'p1:code:1:code:1', toolName: 'read' } satisfies SelectionTarget)
     const emptyList = createSnapshotStore<SessionListState>(
       { ids: [], byId: {}, current: undefined, phase: 'ready', subagentsByParent: {}, jobsBySession: {}, currentAddress: undefined })
     const emptyWorkspaces = createSnapshotStore<WorkspaceListState>({
@@ -197,8 +195,7 @@ describe('render branch tails', () => {
           pruneImages: () => {},
           submit: () => {},
         }}
-        useStore={bindSnapshotSelector(chat)}
-        actions={chat.actions}
+        useSelection={bindSnapshotSelector(selection)}
         closeDetails={vi.fn()}
         t={t}
       />,

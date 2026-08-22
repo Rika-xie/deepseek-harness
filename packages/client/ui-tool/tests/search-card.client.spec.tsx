@@ -21,7 +21,6 @@ import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
 import { zh as commonZh } from '@deepseek-ai/dsh-client-locale/src/locales/zh.ts'
 import { CHAT_SEARCH_MAX_LINES, searchCardModel } from '../src/client/tool/models/search-card-model.ts'
 import { zh } from '@deepseek-ai/dsh-client-ui-conversation/src/client/locales.ts'
-import { createChatStore } from '@deepseek-ai/dsh-client-ui-conversation/src/client/stores.ts'
 import { GenericToolCard, type GenericToolCardProps } from '../src/client/tool/toolviews/GenericToolCard.tsx'
 import { DetailsPanel } from '@deepseek-ai/dsh-client-ui-conversation/src/client/skeleton/DetailsPanel.tsx'
 import { SearchRow, searchToolview } from '../src/client/tool/toolviews/search-row.tsx'
@@ -379,8 +378,8 @@ describe('SearchRow keyed card', () => {
 describe('DetailsPanel Output section (search)', () => {
   function mount(snapshot: ConversationSnapshot, selection: SelectionTarget | null) {
     localStorage.clear()
-    const chat = createChatStore().create()
-    if (selection !== null) chat.actions.select(selection)
+    const selectionStore = createSnapshotStore<SelectionTarget | null>(null)
+    if (selection !== null) selectionStore.set(selection)
     const sessions = createSnapshotStore<SessionListState>({
       ids: [], byId: {}, current: undefined, phase: 'ready',
       subagentsByParent: {}, jobsBySession: {}, currentAddress: undefined,
@@ -406,8 +405,7 @@ describe('DetailsPanel Output section (search)', () => {
           submit: () => {},
         }}
         useProjection={(() => undefined)}
-        useStore={bindSnapshotSelector(chat)}
-        actions={chat.actions}
+        useSelection={bindSnapshotSelector(selectionStore)}
         closeDetails={vi.fn()}
         t={t}
       />,

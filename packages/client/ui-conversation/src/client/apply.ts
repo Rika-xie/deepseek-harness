@@ -2,7 +2,8 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { resolveSlotLabel, type BoundActions } from '@deepseek-ai/dsh-client-ui-slots'
 import {
-  resolveWorkspacePath, type ISessions, type SessionId,
+  createSnapshotStore, resolveWorkspacePath,
+  type ISessions, type ObservableSnapshot, type SessionId, type SnapshotStore,
 } from '@deepseek-ai/dsh-client-runtime/client'
 // Type-only: the ctx.settingsScope Context merge. Cross-plugin collaboration
 // goes through the service, never a value import (client bundle purity gate).
@@ -10,7 +11,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 // Type-only: pulls the locale plugin's Context merge (ctx.locale).
 import type {} from '@deepseek-ai/dsh-client-locale/client'
-import type { ViewTab } from './contract/views.ts'
+import type { SelectionTarget, ViewTab } from './contract/views.ts'
 import type {
   ApprovalWait, ChatNodeTurnDataInjected, ChatScrollPosition, ChatViewInjected, ComposerBarInjected,
   ComposerChainProps, ConversationInjected, ConversationSessionHeaderInjected, ConversationSessionInjected,
@@ -72,6 +73,11 @@ const ABSENT_LEXICON = {
 }
 const ABSENT_MENU_LAUNCHER = {
   getSnapshot: (): string | null => null,
+  subscribe: () => () => {},
+}
+/** No current session, therefore no selected tool-detail target; same one-identity rule as above. */
+const ABSENT_SELECTION: ObservableSnapshot<SelectionTarget | null> = {
+  getSnapshot: () => null,
   subscribe: () => () => {},
 }
 
@@ -175,15 +181,42 @@ export function apply(ctx: Context): void {
   // way: this package must not import the plugins that would know.
   const composerBlocks = new ComposerBlockRegistry()
 
+  // Per-session tool-detail selection, the SINGLE source shared by ChatView
+  // and DetailsPanel. It lives in the apply closure (not module scope: a
+  // module map would survive plugin reloads and leak dead sessions) and is
+  // persisted per session so the details tab survives reloads. Teardown rides
+  // the session scope disposer below.
+  const selectionStores = new Map<SessionId, SnapshotStore<SelectionTarget | null>>()
+  const selectionFor = (sessionId: SessionId): SnapshotStore<SelectionTarget | null> => {
+    let store = selectionStores.get(sessionId)
+    if (store === undefined) {
+      store = createSnapshotStore<SelectionTarget | null>(null, {
+        persist: { name: `dsh.conversation.selection.${sessionId}` },
+      })
+      selectionStores.set(sessionId, store)
+    }
+    return store
+  }
+
   // The input machine feeds every session-scope slot
   // component through the standard provide channel — the 'input' hook plus
   // the two public actions. Materialization is the shell creation trigger
-  // (per-session lazy; scope disposer tears down).
+  // (per-session lazy; scope disposer tears down). The selection store is
+  // also materialized here so its lifecycle follows the same session scope,
+  // but it is NOT exposed through the standard kit — ChatView/DetailsPanel
+  // consume it via their entry inject hooks.
   ctx.effect(() => sessions.provide({
     hooks: ['input'],
     props: ['inputActions'],
     resolve: (binding) => {
       const shell = inputHub.shellFor(binding)
+      selectionFor(binding.sessionId)
+      binding.ctx.effect(() => () => {
+        selectionStores.delete(binding.sessionId)
+        if (typeof localStorage !== 'undefined') {
+          localStorage.removeItem(`dsh.conversation.selection.${binding.sessionId}`)
+        }
+      }, 'ui-conversation: selection store')
       return {
         hooks: { input: shell.state },
         props: { inputActions: shell.actions },
@@ -393,7 +426,7 @@ export function apply(ctx: Context): void {
       const scoped = scopedConversation(sessions, sessionId)
       return {
         openDetails: (target) => {
-          actions.select(target)
+          selectionFor(sessionId).set(target)
           layout.openDetails()
         },
         fileMentions: owner => ctx.get('chatFileMentions')?.forClosing(owner),
@@ -423,6 +456,7 @@ export function apply(ctx: Context): void {
               // Fork or child-rename failure keeps the source view untouched.
             })
         },
+        hooks: { selection: selectionFor(sessionId) },
       }
     },
   }, ChatView)
@@ -443,15 +477,25 @@ export function apply(ctx: Context): void {
   // registration path into the input dock declared above.
   ctx.plugin(queueDockEntry)
 
+  // Native tool-details tab inside the right dock. Registered as a
+  // `shell.right-sidebar` entry (session-maybe slot) so the panel receives
+  // the framework session kit; selection arrives through this entry's
+  // injected `selection` hook (shared with ChatView) instead of a shared
+  // slot store or a global standard prop.
   slots.register({
-    name: 'details',
+    name: 'shell.right-sidebar',
+    id: 'details',
+    order: 0,
+    label: () => t('details.title'),
     locale: NS,
     children: {
       'conversation.details.tool': { kind: 'single', scope: 'session' },
     },
-    store: chatStore,
-    inject: (): DetailsInjected => ({
+    inject: (sessionId: SessionId | undefined): DetailsInjected => ({
       closeDetails: () => { layout.closeDetails() },
+      hooks: {
+        selection: sessionId === undefined ? ABSENT_SELECTION : selectionFor(sessionId),
+      },
     }),
   }, DetailsPanel)
 

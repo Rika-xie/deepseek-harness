@@ -29,7 +29,7 @@ beforeEach(() => {
   vi.stubGlobal('ResizeObserver', ResizeObserverStub)
 })
 
-type AppRootProps = PropsRenderSlots<'conversation' | 'details'>
+type AppRootProps = PropsRenderSlots<'conversation' | 'details' | 'shell.right-sidebar'>
 function AppRoot({ renderSlot }: AppRootProps) {
   return <>{renderSlot('conversation', {})}</>
 }
@@ -37,6 +37,7 @@ function AppRoot({ renderSlot }: AppRootProps) {
 const LAYOUT_CHILDREN = {
   'conversation': { kind: 'single', scope: 'session-maybe' },
   'details': { kind: 'single', scope: 'session' },
+  'shell.right-sidebar': { kind: 'list', scope: 'session-maybe' },
 } as const
 
 function WorkspaceProbe({ open }: EmptyWorkspaceOwnerProps) {

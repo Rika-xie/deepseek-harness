@@ -273,8 +273,10 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 
   /**
    * ui-conversation's members of the session standard kit, provided through
-   * `sessions.provide`: every session-scope slot component
-   * receives the input machine's state hook and the two public actions.
+   * `sessions.provide`: every session-scope slot component receives the
+   * input machine's state hook and the two public actions. Tool-detail
+   * selection deliberately does NOT ride this global kit: it is injected at
+   * the chat/details entries that consume it.
    */
   interface SessionStandardProps {
     /** Selector hook over the session's live input machine state. */
@@ -745,10 +747,11 @@ export interface ChatScrollPosition {
 
 /**
  * Injected share of the chat view entry: the two callbacks whose targets live
- * outside the view (layout orchestration; the session object layer).
+ * outside the view (layout orchestration; the session object layer), plus the
+ * per-session selection hook both ChatView and DetailsPanel read.
  */
 export interface ChatViewInjected {
-  /** Selection write + details panel opening in one gesture (store action + layout orchestration). */
+  /** Selection write + details panel opening in one gesture (selection snapshot + layout orchestration). */
   openDetails: (target: SelectionTarget) => void
   /**
    * Open a tool-arg filesystem path with the host OS default application
@@ -782,13 +785,22 @@ export interface ChatViewInjected {
    * absent or the turn produced nothing worth linking.
    */
   fileMentions: (owner: TurnTailOwnerProps) => MarkdownFileMentions | undefined
+  /**
+   * Registrant hooks compartment: the selected tool-detail target for this
+   * session. Both ChatView (call-row highlight) and DetailsPanel (native
+   * tool card) read the SAME per-session snapshot, so there is one selection
+   * source. Bound by the framework to a `useSelection` selector hook.
+   */
+  hooks: {
+    selection: ObservableSnapshot<SelectionTarget | null>
+  }
 }
 
-/** Full chat-view component props: runtime & its Tool/command/tail render shares & store & injected & locale seat. */
+/** Full chat-view component props: runtime & its Tool/command/tail render shares & store & injected face (hooks bound) & locale seat. */
 export type ChatViewSlotProps =
   PropsRuntime<'conversation.view'>
   & PropsRenderSlots<'conversation.chat.node' | 'conversation.message.images'>
-  & PropsStore<ChatStore> & ChatViewInjected & PropsLocale<'conversation'>
+  & PropsStore<ChatStore> & InjectFace<ChatViewInjected> & PropsLocale<'conversation'>
 
 /** Full props of the attachment plugin's composer entry. */
 export type ComposerAttachmentsProps =
@@ -798,17 +810,35 @@ export type ComposerAttachmentsProps =
 export type MessageImagesProps = PropsRuntime<'conversation.message.images'> & PropsLocale<'conversation'>
 
 /**
- * Injected share of the details slot: the panel is otherwise a pure reader of
- * the shared chat store, but its close button is a layout orchestration call.
+ * Injected share of the details dock entry: the panel is otherwise a pure
+ * reader of the per-session selection hook, but its close button is a layout
+ * orchestration call.
  */
 export interface DetailsInjected {
-  /** Close the details panel (layout geometry stays with ctx.layout). */
+  /** Close the right dock (the details tab lives inside it). */
   closeDetails: () => void
+  /**
+   * Registrant hooks compartment: the selected tool-detail target for this
+   * session. Shared with ChatView's inject hook, so the details tab and the
+   * chat call-row highlight always agree. Absent current session the source
+   * still returns null (hook order stays stable).
+   */
+  hooks: {
+    selection: ObservableSnapshot<SelectionTarget | null>
+  }
 }
 
-/** Full details-slot props: selection store, Tool output seat, injected close callback, and locale. */
-export type DetailsSlotProps = PropsRuntime<'details'> & PropsRenderSlots<'conversation.details.tool'>
-  & PropsStore<ChatStore> & DetailsInjected & PropsLocale<'conversation'>
+/**
+ * Full details dock-entry props: session-maybe runtime kit (sessionId,
+ * useSession), the Tool output seat, injected close callback + selection
+ * hook, and locale. The selection deliberately does not ride a shared slot
+ * store or the global standard kit: ui-layout's `shell.right-sidebar` is
+ * session-maybe (a root/session store scope mismatch would break the shared
+ * chat store), so ui-conversation publishes the per-session selection through
+ * the chat/details entry inject hooks instead.
+ */
+export type DetailsSlotProps = PropsRuntime<'shell.right-sidebar'> & PropsRenderSlots<'conversation.details.tool'>
+  & InjectFace<DetailsInjected> & PropsLocale<'conversation'>
 
 /** Owner share common to the hero / New-Session Workspace pickers. */
 export interface EmptyWorkspaceOwnerProps {

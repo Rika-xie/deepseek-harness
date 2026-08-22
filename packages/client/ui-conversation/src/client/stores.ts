@@ -1,13 +1,14 @@
 /**
- * Per-session chat store shared by conversation and details registrations.
- * The plugin creates its handle at apply time so identity follows the fiber.
+ * Per-session chat store shared by conversation, chat-view, and header
+ * registrations. Tool-detail selection lives outside this store (see
+ * contract/views.ts); the plugin creates its handle at apply time so
+ * identity follows the fiber.
  */
 import { defineStore, type EngineStoreHandle } from '@deepseek-ai/dsh-client-runtime/client'
-import type { CallId, ChatStoreState, SelectionTarget } from './contract/views.ts'
+import type { CallId, ChatStoreState } from './contract/views.ts'
 
 /** Declared action shape used to give the exported factory a stable return type. */
 type ChatActions = {
-  select: (draft: ChatStoreState, target: SelectionTarget | null) => void
   setDraft: (draft: ChatStoreState, text: string) => void
   setView: (draft: ChatStoreState, view: string) => void
   setInspect: (draft: ChatStoreState, target: { callId: CallId } | null) => void
@@ -22,10 +23,9 @@ export function createChatStore(): EngineStoreHandle<ChatStoreState, ChatActions
     // Anchored to the contract shape: consumers read the store through
     // PropsStore<ChatStore>'s SnapshotSelectorHook<ChatStoreState>, so init
     // and the contract cannot drift.
-    init: (): ChatStoreState => ({ selection: null, draft: '', view: null, inspect: null }),
+    init: (): ChatStoreState => ({ draft: '', view: null, inspect: null }),
     persist: 'dsh.conversation.chat',
     actions: {
-      select: (d, target: SelectionTarget | null) => { d.selection = target },
       setDraft: (d, text: string) => { d.draft = text },
       setView: (d, view: string) => { d.view = view },
       setInspect: (d, target: { callId: CallId } | null) => { d.inspect = target },
