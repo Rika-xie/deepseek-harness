@@ -27,6 +27,10 @@ export interface ILayout {
   openDetails(): void
   /** Close the details panel. */
   closeDetails(): void
+  /** Open the additive docked right-sidebar column. */
+  openRightSidebar(): void
+  /** Close the additive docked right-sidebar column. */
+  closeRightSidebar(): void
 }
 
 /** Cross-plugin panel-action face (ctx.layout). */
@@ -57,6 +61,16 @@ export class LayoutController implements ILayout {
   /** Close the details panel. */
   closeDetails(): void {
     this.#require().closeDetails()
+  }
+
+  /** Open the additive docked right-sidebar column. */
+  openRightSidebar(): void {
+    this.#require().openRightSidebar()
+  }
+
+  /** Close the additive docked right-sidebar column. */
+  closeRightSidebar(): void {
+    this.#require().closeRightSidebar()
   }
 
   #require(): PanelActions {

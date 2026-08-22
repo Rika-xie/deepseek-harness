@@ -71,6 +71,20 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
      */
     'details': { kind: 'single'; scope: 'session'; owner: DetailsOwnerProps }
     /**
+     * Additive docked column between the conversation and details columns.
+     * Registrants coordinate their open/closed state with
+     * `ctx.layout.openRightSidebar/closeRightSidebar`; the frame then includes
+     * the dock in its concession solver. An open entry renders a full-height
+     * surface and fills the owner-controlled track. Use this for persistent
+     * workspace tools such as a file tree or a side panel, not for floating
+     * notices (which belong in `shell.overlay`).
+     *
+     * A fresh `id` adds a surface beside other entries; entries should
+     * coordinate their visibility so only one wide workspace tool is open at
+     * a time.
+     */
+    'shell.right-sidebar': { kind: 'list'; scope: 'root' }
+    /**
      * Frame-wide floating layer, above every column and outside their scroll
      * containers. Deliberately generic and unowned by any feature: a badge, a
      * toast stack or a status pill all belong here, and entries order among
@@ -123,6 +137,7 @@ export function apply(ctx: ClientContext): void {
         'sidebar': { kind: 'single', scope: 'root' },
         'conversation': { kind: 'single', scope: 'session-maybe' },
         'details': { kind: 'single', scope: 'session' },
+        'shell.right-sidebar': { kind: 'list', scope: 'root' },
         'shell.overlay': { kind: 'list', scope: 'root' },
       },
       // Exclusive store: the factory itself — the framework instantiates per

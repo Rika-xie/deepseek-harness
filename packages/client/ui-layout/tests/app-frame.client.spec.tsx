@@ -60,6 +60,7 @@ function mountFrame() {
     slotCalls.push({ key, props: owner })
     if (key === 'sidebar') return <div data-testid="sidebar-content" />
     if (key === 'conversation') return <div data-testid="center-content" />
+    if (key === 'shell.right-sidebar') return null
     if (key === 'details') return <div data-testid="details-content" />
     if (key === 'conversation.empty') return <div data-testid="empty-content" />
     return <div data-testid="other-content" />
@@ -96,9 +97,15 @@ function mountFrame() {
 }
 
 function tracks(frame: HTMLElement): number[] {
-  const m = /^(\d+)px minmax\(0, 1fr\) (\d+)px$/.exec(frame.style.gridTemplateColumns)
+  const m = /^(\d+)px minmax\(0, 1fr\) (\d+)px (\d+)px$/.exec(frame.style.gridTemplateColumns)
   if (m === null) throw new Error(`unexpected template: ${frame.style.gridTemplateColumns}`)
-  return [Number(m[1]), Number(m[2])]
+  return [Number(m[1]), Number(m[3])]
+}
+
+function rightTrack(frame: HTMLElement): number {
+  const m = /^(\d+)px minmax\(0, 1fr\) (\d+)px (\d+)px$/.exec(frame.style.gridTemplateColumns)
+  if (m === null) throw new Error(`unexpected template: ${frame.style.gridTemplateColumns}`)
+  return Number(m[2])
 }
 
 function drag(handle: Element, fromX: number, toX: number): void {
@@ -149,9 +156,34 @@ describe('AppFrame', () => {
     const keys = slotCalls.map(c => c.key)
     expect(keys).toContain('conversation')
     expect(keys).toContain('details')
+    expect(keys).toContain('shell.right-sidebar')
     expect(keys).not.toContain('conversation.empty')
     expect(slotCalls.find(c => c.key === 'conversation')!.props).toEqual({})
     expect(slotCalls.find(c => c.key === 'details')!.props).toEqual({})
+  })
+
+  it('renders the additive right-sidebar dock between conversation and details', () => {
+    const { frame, slotCalls } = mountFrame()
+    const center = frame.querySelector('[class*="centerCol"]')
+    const dock = frame.querySelector('[class*="rightSidebarCol"]')
+    const details = frame.querySelector('[class*="detailsCol"]')
+    expect(dock).not.toBeNull()
+    expect(center?.nextElementSibling).toBe(dock)
+    expect(dock?.nextElementSibling).toBe(details)
+    expect(slotCalls.find(c => c.key === 'shell.right-sidebar')?.props).toEqual({})
+  })
+
+  it('includes the dock in the concession solver and restores it after widening', () => {
+    const { frame, instance } = mountFrame()
+    act(() => { instance.actions.openRightSidebar() })
+    expect(rightTrack(frame)).toBe(320)
+    frameWidth = 1100
+    act(() => { fireResize?.(); vi.advanceTimersByTime(20) })
+    expect(rightTrack(frame)).toBe(0)
+    expect(instance.getSnapshot().rightSidebar).toBe(320)
+    frameWidth = 1920
+    act(() => { fireResize?.(); vi.advanceTimersByTime(20) })
+    expect(rightTrack(frame)).toBe(320)
   })
 
   it('keeps the conversation slot mounted while no session is current', () => {

@@ -14,7 +14,7 @@
  */
 
 /** Resolved widths for one frame; center may drop below CENTER_MIN only at the final fallback. */
-export interface Columns { sidebar: number; center: number; details: number }
+export interface Columns { sidebar: number; center: number; rightSidebar: number; details: number }
 
 // Contract-frozen geometry: the three-column concession chain's fixed points.
 /** Center column floor; only the final fallback may go below it. */
@@ -37,6 +37,12 @@ export const DETAILS_MIN = 300
 export const DETAILS_MAX = 520
 /** Details width before any user drag. */
 export const DETAILS_DEFAULT = 360
+/** Right-sidebar clamp floor. */
+export const RIGHT_SIDEBAR_MIN = 240
+/** Right-sidebar clamp ceiling. */
+export const RIGHT_SIDEBAR_MAX = 480
+/** Right-sidebar width before any future resize affordance. */
+export const RIGHT_SIDEBAR_DEFAULT = 320
 
 /**
  * Clamp a panel width into its contract range.
@@ -59,19 +65,40 @@ export function clampWidth(px: number, min: number, max: number): number {
  * @param details - details width preference in px (0 = closed).
  * @returns resolved widths; details 0 means visually closed (never unmounted), while a closed sidebar keeps its compact rail.
  */
-export function computeColumns(viewport: number, sidebar: number, details: number): Columns {
+export function computeColumns(
+  viewport: number,
+  sidebar: number,
+  rightSidebar: number,
+  details: number,
+): Columns {
   // The sidebar is fixed at its preference (or the rail) — it never concedes.
   const s = sidebar === 0 ? SIDEBAR_COLLAPSED : clampWidth(sidebar, SIDEBAR_MIN, SIDEBAR_MAX)
+  const r0 = rightSidebar === 0 ? 0 : clampWidth(rightSidebar, RIGHT_SIDEBAR_MIN, RIGHT_SIDEBAR_MAX)
   const d0 = details === 0 ? 0 : clampWidth(details, DETAILS_MIN, DETAILS_MAX)
 
   // Step 1: everything fits at preferred widths.
-  if (s + d0 + CENTER_MIN <= viewport) return { sidebar: s, center: viewport - s - d0, details: d0 }
+  if (s + r0 + d0 + CENTER_MIN <= viewport) {
+    return { sidebar: s, center: viewport - s - r0 - d0, rightSidebar: r0, details: d0 }
+  }
 
   // Step 2: shrink details toward its minimum.
-  const d1 = d0 === 0 ? 0 : Math.max(DETAILS_MIN, viewport - s - CENTER_MIN)
-  if (s + d1 + CENTER_MIN <= viewport) return { sidebar: s, center: CENTER_MIN, details: d1 }
+  const d1 = d0 === 0 ? 0 : Math.max(DETAILS_MIN, viewport - s - r0 - CENTER_MIN)
+  if (s + r0 + d1 + CENTER_MIN <= viewport) {
+    return { sidebar: s, center: CENTER_MIN, rightSidebar: r0, details: d1 }
+  }
 
-  // Step 3: auto-close details (derived — preferences untouched); center
-  // absorbs any remaining deficit (may drop below CENTER_MIN).
-  return { sidebar: s, center: Math.max(0, viewport - s), details: 0 }
+  // Step 3: auto-close details (derived — preferences untouched).
+  if (s + r0 + CENTER_MIN <= viewport) {
+    return { sidebar: s, center: viewport - s - r0, rightSidebar: r0, details: 0 }
+  }
+
+  // Step 4: shrink the right sidebar toward its minimum.
+  const r1 = r0 === 0 ? 0 : Math.max(RIGHT_SIDEBAR_MIN, viewport - s - CENTER_MIN)
+  if (s + r1 + CENTER_MIN <= viewport) {
+    return { sidebar: s, center: CENTER_MIN, rightSidebar: r1, details: 0 }
+  }
+
+  // Step 5: auto-close the right sidebar; center absorbs any remaining
+  // deficit (may drop below CENTER_MIN).
+  return { sidebar: s, center: Math.max(0, viewport - s), rightSidebar: 0, details: 0 }
 }
