@@ -61,12 +61,13 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
      */
     'conversation': { kind: 'single'; scope: 'session-maybe'; owner: ConvOwnerProps }
     /**
-     * Legacy right details column, kept as a declared frame slot for
-     * compatibility (width 0 and empty unless a future occupant registers).
-     * The native DetailsPanel no longer lives here: it is a tab inside
-     * `shell.right-sidebar`. No owner props: the framework injects the
-     * session id and hooks for the `session` scope, and `ctx.layout` owns
-     * whether the column is open.
+     * The right details column, shown when the layout opens it. OCCUPIED by
+     * ui-conversation's DetailsPanel, which declares the tool-details seat
+     * inside it — registering here replaces the column and takes that seat
+     * with it. Absent an occupant the column renders nothing.
+     *
+     * No owner props: the framework injects the session id and hooks for the
+     * `session` scope, and `ctx.layout` owns whether the column is open.
      */
     'details': { kind: 'single'; scope: 'session'; owner: DetailsOwnerProps }
     /**
@@ -76,9 +77,10 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
      * state with `ctx.layout.openRightSidebar/closeRightSidebar`; the frame
      * then includes the dock in its concession solver.
      *
-     * Session-maybe (deliberate fork point vs pilot's root): entries such as
-     * the native tool-details panel need the framework session kit
-     * (`sessionId`/`useSession`), which root-scope slots cannot receive.
+     * Session-maybe (deliberate fork point vs pilot's root): docked
+     * workspace-tool entries (file tree, sidechat) may need the framework
+     * session kit (`sessionId`/`useSession`), which root-scope slots cannot
+     * receive.
      */
     'shell.right-sidebar': { kind: 'list'; scope: 'session-maybe' }
     /**

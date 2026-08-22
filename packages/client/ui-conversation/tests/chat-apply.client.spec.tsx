@@ -37,7 +37,7 @@ async function bench() {
   // them here so the contributions land.
   await runtime.root.declare({
     'conversation': { kind: 'single', scope: 'session-maybe' },
-    'shell.right-sidebar': { kind: 'list', scope: 'session-maybe' },
+    'details': { kind: 'single', scope: 'session' },
     'settings.general.item': { kind: 'list', scope: 'root' },
   }, (_p: { renderSlot?: unknown }) => null)
 
@@ -46,7 +46,7 @@ async function bench() {
 }
 
 /** First stored entry for a key (inject/store live directly on StoredEntry). */
-function renderEntryOf(slots: Awaited<ReturnType<typeof bench>>['slots'], key: 'conversation' | 'conversation.session' | 'conversation.session.header' | 'conversation.view' | 'shell.right-sidebar') {
+function renderEntryOf(slots: Awaited<ReturnType<typeof bench>>['slots'], key: 'conversation' | 'conversation.session' | 'conversation.session.header' | 'conversation.view' | 'details') {
   return slots.entries(key)[0] as undefined | { inject?: unknown; store?: unknown }
 }
 
@@ -78,20 +78,18 @@ describe('apply wiring', () => {
     const conversationSession = renderEntryOf(b.slots, 'conversation.session')
     const conversationHeader = renderEntryOf(b.slots, 'conversation.session.header')
     const chatView = renderEntryOf(b.slots, 'conversation.view')
-    const details = renderEntryOf(b.slots, 'shell.right-sidebar')
+    const details = renderEntryOf(b.slots, 'details')
     expect(conversation?.inject).toBeTypeOf('function')
     expect(chatView?.inject).toBeTypeOf('function')
     expect(details?.inject).toBeTypeOf('function')
-    // The shared handle: one apply-built store value on ALL strict session
-    // entries (the session-maybe 'conversation' shell and the dock carry no
-    // store by design).
+    // The shared handle: one apply-built store value on the strict session
+    // entries that need it. The session-maybe 'conversation' shell and the
+    // details panel carry no store by design (details reads selection
+    // through its entry inject hook, not a shared store seat).
     expect(conversationSession?.store).toBeDefined()
     expect(conversationHeader?.store).toBe(conversationSession?.store)
     expect(details?.store).toBeUndefined()
     expect(chatView?.store).toBe(conversationSession?.store)
-    // The dock details tab carries a locale-resolved label (G1).
-    const detailsEntry = b.slots.entries('shell.right-sidebar')[0]!
-    expect(resolveSlotLabel(detailsEntry.options.label)).toBe('详情')
     // The hero holes ride the conversation entry's children declaration (the
     // empty-state occupant is gone). Both are root-scoped: the new-session
     // screen precedes the session either would belong to.
@@ -125,7 +123,7 @@ describe('apply wiring', () => {
     expect(b.slots.entries('conversation.view')).toHaveLength(0)
     expect(b.slots.entries('conversation.chat.node')).toHaveLength(0)
     expect(b.slots.spec('conversation.chat.node')).toBeUndefined()
-    expect(b.slots.entries('shell.right-sidebar')).toHaveLength(0)
+    expect(b.slots.entries('details')).toHaveLength(0)
     expect(b.slots.entries('settings.general.item')).toHaveLength(0)
     expect(b.runtime.ctx.get('conversation')).toBeUndefined()
     await b.runtime.dispose()

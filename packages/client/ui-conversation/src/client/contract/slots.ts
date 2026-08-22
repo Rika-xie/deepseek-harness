@@ -810,18 +810,17 @@ export type ComposerAttachmentsProps =
 export type MessageImagesProps = PropsRuntime<'conversation.message.images'> & PropsLocale<'conversation'>
 
 /**
- * Injected share of the details dock entry: the panel is otherwise a pure
+ * Injected share of the details slot: the panel is otherwise a pure
  * reader of the per-session selection hook, but its close button is a layout
  * orchestration call.
  */
 export interface DetailsInjected {
-  /** Close the right dock (the details tab lives inside it). */
+  /** Close the details panel (layout geometry stays with ctx.layout). */
   closeDetails: () => void
   /**
    * Registrant hooks compartment: the selected tool-detail target for this
-   * session. Shared with ChatView's inject hook, so the details tab and the
-   * chat call-row highlight always agree. Absent current session the source
-   * still returns null (hook order stays stable).
+   * session. Shared with ChatView's inject hook, so the details panel and
+   * the chat call-row highlight always agree.
    */
   hooks: {
     selection: ObservableSnapshot<SelectionTarget | null>
@@ -829,15 +828,13 @@ export interface DetailsInjected {
 }
 
 /**
- * Full details dock-entry props: session-maybe runtime kit (sessionId,
- * useSession), the Tool output seat, injected close callback + selection
- * hook, and locale. The selection deliberately does not ride a shared slot
- * store or the global standard kit: ui-layout's `shell.right-sidebar` is
- * session-maybe (a root/session store scope mismatch would break the shared
- * chat store), so ui-conversation publishes the per-session selection through
- * the chat/details entry inject hooks instead.
+ * Full details-slot props: session runtime kit (sessionId, useSession), the
+ * Tool output seat, injected close callback + selection hook, and locale.
+ * The selection deliberately does not ride a shared slot store or the global
+ * standard kit: ui-conversation publishes ONE per-session selection source
+ * through the chat/details entry inject hooks, so both readers always agree.
  */
-export type DetailsSlotProps = PropsRuntime<'shell.right-sidebar'> & PropsRenderSlots<'conversation.details.tool'>
+export type DetailsSlotProps = PropsRuntime<'details'> & PropsRenderSlots<'conversation.details.tool'>
   & InjectFace<DetailsInjected> & PropsLocale<'conversation'>
 
 /** Owner share common to the hero / New-Session Workspace pickers. */

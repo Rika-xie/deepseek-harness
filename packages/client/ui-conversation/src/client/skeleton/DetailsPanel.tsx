@@ -1,8 +1,9 @@
-// DetailsPanel: the native tool-details tab of the right dock — close button
-// + the selected call's args and result. Reads the selection from the session
-// standard kit (`useSelection`, published by ui-conversation through
-// sessions.provide) and derives the call material from the session snapshot —
-// no data of its own.
+// DetailsPanel: close button + the selected call's args and result — args as
+// JSON, the result raw except for a terminal-card call, whose Output section
+// is the command's terminal card. Reads the selection from the per-session
+// selection hook (`useSelection`, injected at this entry and shared with
+// ChatView — one selection source for both readers) and derives the call
+// material from the session snapshot — no data of its own.
 
 import { Fragment } from 'react'
 import { CodeBlock } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -65,7 +66,7 @@ export function DetailsPanel({ useSession, useSessions, sessionId, useSelection,
   const selection = useSelection(s => s)
   // Session workspace root: an omitted or relative terminal cwd resolves
   // against it, which the pure presenter cannot see.
-  const sessionCwd = useSessions(list => sessionId === undefined ? undefined : list.byId[sessionId]?.cwd)
+  const sessionCwd = useSessions(list => list.byId[sessionId]?.cwd)
   const callId = selection?.callId
   // materialFor builds a fresh wrapper; shallowEqual short-circuits on its
   // stable members (result node reference rides the snapshot's structural sharing).
@@ -77,7 +78,7 @@ export function DetailsPanel({ useSession, useSessions, sessionId, useSelection,
     <div className={css.root}>
       <div className={css.header}>
         <div className={css.title}>
-          {selection == null ? t('details.title') : material?.name ?? selection.toolName ?? t('details.title')}
+          {selection === null ? t('details.title') : material?.name ?? selection.toolName ?? t('details.title')}
         </div>
         <button
           type="button" className={css.close} aria-label={t('details.close')}
@@ -89,9 +90,9 @@ export function DetailsPanel({ useSession, useSessions, sessionId, useSelection,
         </button>
       </div>
       <div className={css.body}>
-        {selection == null || callId === undefined
+        {selection === null || callId === undefined
           ? <div className={css.empty}>{t('details.empty')}</div>
-          : material == null
+          : material === null
             ? <div className={css.empty}>{t('details.notInWindow')}</div>
             : (
               <>

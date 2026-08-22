@@ -3,7 +3,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { resolveSlotLabel, type BoundActions } from '@deepseek-ai/dsh-client-ui-slots'
 import {
   createSnapshotStore, resolveWorkspacePath,
-  type ISessions, type ObservableSnapshot, type SessionId, type SnapshotStore,
+  type ISessions, type SessionId, type SnapshotStore,
 } from '@deepseek-ai/dsh-client-runtime/client'
 // Type-only: the ctx.settingsScope Context merge. Cross-plugin collaboration
 // goes through the service, never a value import (client bundle purity gate).
@@ -75,12 +75,6 @@ const ABSENT_MENU_LAUNCHER = {
   getSnapshot: (): string | null => null,
   subscribe: () => () => {},
 }
-/** No current session, therefore no selected tool-detail target; same one-identity rule as above. */
-const ABSENT_SELECTION: ObservableSnapshot<SelectionTarget | null> = {
-  getSnapshot: () => null,
-  subscribe: () => () => {},
-}
-
 const CHAT_NODE_INJECT: ChatNodeTurnDataInjected = {
   hooks: {
     turnData: ({ useSession }, nodeKey) => function useTurnData(key) {
@@ -184,7 +178,7 @@ export function apply(ctx: Context): void {
   // Per-session tool-detail selection, the SINGLE source shared by ChatView
   // and DetailsPanel. It lives in the apply closure (not module scope: a
   // module map would survive plugin reloads and leak dead sessions) and is
-  // persisted per session so the details tab survives reloads. Teardown rides
+  // persisted per session so the details panel survives reloads. Teardown rides
   // the session scope disposer below.
   const selectionStores = new Map<SessionId, SnapshotStore<SelectionTarget | null>>()
   const selectionFor = (sessionId: SessionId): SnapshotStore<SelectionTarget | null> => {
@@ -477,25 +471,19 @@ export function apply(ctx: Context): void {
   // registration path into the input dock declared above.
   ctx.plugin(queueDockEntry)
 
-  // Native tool-details tab inside the right dock. Registered as a
-  // `shell.right-sidebar` entry (session-maybe slot) so the panel receives
-  // the framework session kit; selection arrives through this entry's
-  // injected `selection` hook (shared with ChatView) instead of a shared
-  // slot store or a global standard prop.
+  // Native details panel in the legacy 'details' column (session scope, so
+  // the inject receives the current session id). Selection arrives through
+  // this entry's injected `selection` hook (shared with ChatView) instead of
+  // a shared slot store or a global standard prop.
   slots.register({
-    name: 'shell.right-sidebar',
-    id: 'details',
-    order: 0,
-    label: () => t('details.title'),
+    name: 'details',
     locale: NS,
     children: {
       'conversation.details.tool': { kind: 'single', scope: 'session' },
     },
-    inject: (sessionId: SessionId | undefined): DetailsInjected => ({
+    inject: (sessionId: SessionId): DetailsInjected => ({
       closeDetails: () => { layout.closeDetails() },
-      hooks: {
-        selection: sessionId === undefined ? ABSENT_SELECTION : selectionFor(sessionId),
-      },
+      hooks: { selection: selectionFor(sessionId) },
     }),
   }, DetailsPanel)
 

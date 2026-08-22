@@ -67,7 +67,7 @@ async function bench() {
   // live entry before apply can contribute into them.
   await runtime.root.declare({
     'conversation': { kind: 'single', scope: 'session-maybe' },
-    'shell.right-sidebar': { kind: 'list', scope: 'session-maybe' },
+    'details': { kind: 'single', scope: 'session' },
   }, (_p: { renderSlot?: unknown }) => null)
 
   const feature = await runtime.mount({ inject: [...inject], apply })
@@ -75,7 +75,7 @@ async function bench() {
   // The host face (store resolution) exists only inside the installed
   // renderer, so materialize it the way the shell does.
   runtime.renderRoot()
-  const entryOf = (key: 'conversation' | 'conversation.session' | 'conversation.session.header' | 'conversation.composer.bar' | 'conversation.view' | 'shell.right-sidebar') =>
+  const entryOf = (key: 'conversation' | 'conversation.session' | 'conversation.session.header' | 'conversation.composer.bar' | 'conversation.view' | 'details') =>
     runtime.slots.entries(key)[0]!
   /** Resolve store instance + call the inject the way the outlet would. */
   const conversationApi = (id: SessionId) => {
@@ -227,8 +227,8 @@ describe('conversation slot inject API', () => {
     expect(injected.hooks.selection.getSnapshot()).toEqual({ turnSeq: 2, callId: 'c1' })
     expect(b.layoutFake.openDetails).toHaveBeenCalledTimes(1)
     // The details entry reads the SAME per-session selection source.
-    const detailsEntry = b.entryOf('shell.right-sidebar')
-    const detailsInjected = (detailsEntry.inject as unknown as (sessionId: SessionId | undefined) => DetailsInjected)(ROOT)
+    const detailsEntry = b.entryOf('details')
+    const detailsInjected = (detailsEntry.inject as unknown as (sessionId: SessionId) => DetailsInjected)(ROOT)
     expect(detailsInjected.hooks.selection.getSnapshot()).toEqual({ turnSeq: 2, callId: 'c1' })
     await b.runtime.dispose()
   })
@@ -349,13 +349,13 @@ describe('conversation slot inject API', () => {
 describe('details inject API', () => {
   it('details injects the layout callback + selection hook; no shared chat-store seat', async () => {
     const b = await bench()
-    const entry = b.entryOf('shell.right-sidebar')
-    const injected = (entry.inject as unknown as (sessionId: SessionId | undefined) => DetailsInjected)(ROOT)
+    const entry = b.entryOf('details')
+    const injected = (entry.inject as unknown as (sessionId: SessionId) => DetailsInjected)(ROOT)
     expect(Object.keys(injected).sort()).toEqual(['closeDetails', 'hooks'])
     expect(injected.hooks.selection.getSnapshot()).toBeNull()
     injected.closeDetails()
     expect(b.layoutFake.closeDetails).toHaveBeenCalledTimes(1)
-    // The dock entry carries no chat-store seat; selection is a snapshot hook.
+    // The details entry carries no chat-store seat; selection is a snapshot hook.
     expect(entry.store).toBeUndefined()
     await b.runtime.dispose()
   })
